@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 module "default_label" {
-  source = "github.com/mitlibraries/tf-mod-name?ref=0.12"
+  source = "github.com/mitlibraries/tf-mod-name?ref=0.13"
   name   = var.name
   tags   = var.tags
 }
@@ -50,15 +50,16 @@ resource "aws_security_group_rule" "https_ingress" {
 /*
 module "access_logs" {
   source     = "git::https://github.com/cloudposse/terraform-aws-lb-s3-bucket.git?ref=tags/0.1.0"
-  attributes = "${var.attributes}"
-  delimiter  = "${var.delimiter}"
-  name       = "${var.name}"
-  namespace  = "${var.namespace}"
-  stage      = "${var.stage}"
-  tags       = "${var.tags}"
-  region     = "${var.access_logs_region}"
+  attributes = var.attributes
+  delimiter  = var.delimiter
+  name       = var.name
+  namespace  = var.namespace
+  stage      = var.stage
+  tags       = var.tags
+  region     = var.access_logs_region
 }
 */
+
 resource "aws_lb" "default" {
   name               = module.default_label.name
   tags               = module.default_label.tags
@@ -75,9 +76,9 @@ resource "aws_lb" "default" {
   enable_deletion_protection       = var.deletion_protection_enabled
   /*
   access_logs {
-    bucket  = "${module.access_logs.bucket_id}"
-    prefix  = "${var.access_logs_prefix}"
-    enabled = "${var.access_logs_enabled}"
+    bucket  = module.access_logs.bucket_id
+    prefix  = var.access_logs_prefix
+    enabled = var.access_logs_enabled
   }
   */
 }
@@ -136,4 +137,3 @@ resource "aws_lb_listener" "https" {
     type             = "forward"
   }
 }
-
