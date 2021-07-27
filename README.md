@@ -1,13 +1,18 @@
-Terraform module to provision an Application Load Balancer, with default listeners and ALB target in AWS.
+# Application Load Balancer Module
 
+This module provisions an Application Load Balancer, with default listeners and ALB target in AWS.
+
+### What's Created
+* An Application Load Balancer (ALB)
+
+### Additional Info
 Modified from [here](https://github.com/cloudposse/terraform-aws-alb)
 
 ## To Do:
 
 -   [ ] Explore/Enable access logs and forwarding to Logz.io
 
-## Inputs
-
+## Input Variables
 | Name                              | Description                                                                                                          |  Type  |           Default           | Required |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------- | :----: | :-------------------------: | :------: |
 | access_logs_enabled               | A boolean flag to enable/disable access_logs                                                                         | string |            `true`           |    no    |
@@ -43,7 +48,6 @@ Modified from [here](https://github.com/cloudposse/terraform-aws-alb)
 | vpc_id                            | VPC ID to associate with ALB                                                                                         | string |              -              |    yes   |
 
 ## Outputs
-
 | Name                     | Description                                 |
 | ------------------------ | ------------------------------------------- |
 | alb_arn                  | The ARN of the ALB                          |

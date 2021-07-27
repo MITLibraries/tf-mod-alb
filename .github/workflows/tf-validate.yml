@@ -1,0 +1,124 @@
+name: Terraform Validate
+
+on: 
+  push: 
+    branches-ignore:
+      - 'main'
+    paths:
+      - 'shared/**/*.tf'
+      - 'modules/**/*.tf'
+  workflow_dispatch:
+
+# Set defaults
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  generate-matrix:
+    # See https://github.community/t/check-pushed-file-changes-with-git-diff-tree-in-github-actions/17220/10 for the 
+    #   source of this block of code. The first job builds the matrix of folders with terraform changes.
+    name: Generate matrix for build
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check changed files
+        id: diff
+        if: github.event.before != '0000000000000000000000000000000000000000'
+        run: |
+          git fetch origin ${{ github.event.before }} --depth=1
+          export DIFF=$( git diff --dirstat=files,0,cumulative ${{ github.event.before }} $GITHUB_SHA | awk -F ' ' '{print $2}' | grep -vE '(^.github|^scripts|^tests|^docs|ansible|packer|vagrant)' )
+          echo "Push Diff between ${{ github.event.before }} and $GITHUB_SHA"
+          echo "$DIFF"
+          # Escape newlines (replace \n with %0A)
+          echo "::set-output name=diff::$( echo "$DIFF" | sed ':a;N;$!ba;s/\n/%0A/g' )"
+      - name: Set matrix for build
+        id: set-matrix
+        run: |
+          # See https://stackoverflow.com/a/62953566/11948346
+          DIFF="${{ steps.diff.outputs.diff }}"
+          JSON="{\"tfpaths\":["
+
+          # Loop by lines
+          while read path; do
+          # Add item to the matrix only if it is not already included
+          JSONline="\"$path\","
+          if [[ "$JSON" != *"$JSONline"* ]]; then
+          JSON="$JSON$JSONline"
+          fi
+          done <<< "$DIFF"
+
+          # Remove last "," and add closing brackets
+          if [[ $JSON == *, ]]; then
+          JSON="${JSON%?}"
+          fi
+          JSON="$JSON]}"
+          echo $JSON
+          # Set output
+          echo "::set-output name=matrix::$( echo "$JSON" )"
+
+  validatetwelve:
+    # Set workflow environment variables
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    
+    # Generate a matrix of jobs using Terraform v0.12.31 to process each 
+    # of the folders with updates.
+    name: Check Terraform v0.12 syntax on "${{ matrix.tfpaths }}"
+    needs: generate-matrix
+    strategy:
+      matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup terraform with the correct version
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.12.31
+    
+      # Run Terraform Validate
+      - name: Validate
+        run: |
+          echo "${{ matrix.tfpaths }}"
+          terraform fmt -check -recursive; terraform init -backend=false; terraform validate
+        working-directory: ${{ matrix.tfpaths }}
+
+  validatethirteen:
+    # Set workflow environment variables
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    
+    # Generate a matrix of jobs using Terraform v0.13.7 to process each 
+    # of the folders with updates.
+    name: Check Terraform v0.13 syntax on "${{ matrix.tfpaths }}"
+    needs: generate-matrix
+    strategy:
+      matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Setup terraform with the correct version
+      - name: Terraform Setup
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.13.7
+    
+      # Run Terraform Validate
+      - name: Validate
+        run: |
+          echo "${{ matrix.tfpaths }}"
+          terraform fmt -check -recursive; terraform init -backend=false; terraform validate
+        working-directory: ${{ matrix.tfpaths }}
