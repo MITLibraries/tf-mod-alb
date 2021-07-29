@@ -50,7 +50,8 @@ output "listener_arns" {
   )
 }
 
-/*output "access_logs_bucket_id" {
+/*
+output "access_logs_bucket_id" {
   description = "The S3 bucket ID for access logs"
   value       = "${module.access_logs.bucket_id}"
 }
